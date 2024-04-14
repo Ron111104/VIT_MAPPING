@@ -23,7 +23,7 @@ const busRoutesData={
       },
       {
         "SL.NO.": 2,
-        "NAME OF THE STOPPING": "DUNLOP",
+        "NAME OF THE STOPPING": "DUNLOP India Ltd",
         "TIME A.M": "06.05AM"
       },
       {
@@ -82,9 +82,13 @@ async function geocodeLocation(locationName) {
 async function geocodeBusRoute(busRouteData) {
     for (const stop of busRouteData) {
         const locationName = stop['NAME OF THE STOPPING'];
+        // Introduce a delay using setTimeout
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Adjust delay time as needed
+        
         const coordinates = await geocodeLocation(locationName);
         if (coordinates) {
-            stop.coordinates = { type: 'Point', coordinates: coordinates };
+            // Ensure proper assignment of coordinates to the stop object
+            stop.coordinates = { type: 'Point', coordinates: [coordinates[0], coordinates[1]] };
         } else {
             // If coordinates are not available, remove the stop from the route data
             delete stop.coordinates;
