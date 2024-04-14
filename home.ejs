@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Routes Map</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        mapboxgl.accessToken = "<%=process.env.MAPBOX_APIKEY%>";
+
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [80.235, 13.0104], // Default center (VIT Chennai coordinates)
+            zoom: 10 // Adjust the zoom level as needed
+        });
+
+        // Add markers for each stop with coordinates
+        <% Object.values(busRoutesData).forEach(stops => { %>
+            stops.forEach(stop => {
+                if (stop.coordinates) {
+                    new mapboxgl.Marker()
+                        .setLngLat(stop.coordinates.coordinates)
+                        .setPopup(new mapboxgl.Popup().setHTML('<h3>' + stop['NAME OF THE STOPPING'] + '</h3><p>' + stop['TIME A.M'] + '</p>'))
+                        .addTo(map);
+                }
+            });
+        <% }); %>
+
+        // Add a route line connecting the stops
+        <% Object.values(busRoutesData).forEach(stops => { %>
+            var coordinates = [];
+            stops.forEach(stop => {
+                if (stop.coordinates) {
+                    coordinates.push(stop.coordinates.coordinates);
+                }
+            });
+
+            if (coordinates.length > 1) {
+                var route = {
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': coordinates
+                    }
+                };
+
+                map.on('load', function () {
+                    map.addSource('route', {
+                        'type': 'geojson',
+                        'data': route
+                    });
+                    map.addLayer({
+                        'id': 'route',
+                        'type': 'line',
+                        'source': 'route',
+                        'layout': {
+                            'line-join': 'round',
+                            'line-cap': 'round'
+                        },
+                        'paint': {
+                            'line-color': '#A020F0',
+                            'line-width': 4
+                        }
+                    });
+                });
+            }
+        <% }); %>
+    </script>
+</body>
+</html>

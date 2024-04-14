@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "@mapbox/mapbox-sdk": "^0.15.5",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "ejs-mate": "^4.0.0",
+    "env": "^0.0.2",
+    "express": "^4.19.2",
+    "fs": "^0.0.1-security",
+    "mongodb": "^6.5.0",
+    "mongoose": "^8.3.1",
+    "node": "^18.20.2",
+    "nodemon": "^3.1.0",
+    "path": "^0.12.7"
+  }
+}
