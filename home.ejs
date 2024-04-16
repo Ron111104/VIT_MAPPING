@@ -19,61 +19,12 @@
         var map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/streets-v11',
-            center: [80.235, 13.0104], // Default center (VIT Chennai coordinates)
+            center: [80.1534, 12.8406], // Default center (VIT Chennai coordinates)
             zoom: 10 // Adjust the zoom level as needed
         });
 
         // Add markers for each stop with coordinates
-        <% Object.values(busRoutesData).forEach(stops => { %>
-            stops.forEach(stop => {
-                if (stop.coordinates) {
-                    new mapboxgl.Marker()
-                        .setLngLat(stop.coordinates.coordinates)
-                        .setPopup(new mapboxgl.Popup().setHTML('<h3>' + stop['NAME OF THE STOPPING'] + '</h3><p>' + stop['TIME A.M'] + '</p>'))
-                        .addTo(map);
-                }
-            });
-        <% }); %>
-
-        // Add a route line connecting the stops
-        <% Object.values(busRoutesData).forEach(stops => { %>
-            var coordinates = [];
-            stops.forEach(stop => {
-                if (stop.coordinates) {
-                    coordinates.push(stop.coordinates.coordinates);
-                }
-            });
-
-            if (coordinates.length > 1) {
-                var route = {
-                    'type': 'Feature',
-                    'geometry': {
-                        'type': 'LineString',
-                        'coordinates': coordinates
-                    }
-                };
-
-                map.on('load', function () {
-                    map.addSource('route', {
-                        'type': 'geojson',
-                        'data': route
-                    });
-                    map.addLayer({
-                        'id': 'route',
-                        'type': 'line',
-                        'source': 'route',
-                        'layout': {
-                            'line-join': 'round',
-                            'line-cap': 'round'
-                        },
-                        'paint': {
-                            'line-color': '#A020F0',
-                            'line-width': 4
-                        }
-                    });
-                });
-            }
-        <% }); %>
+       
     </script>
 </body>
 </html>
