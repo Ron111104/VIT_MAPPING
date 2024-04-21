@@ -1,8 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
-const fs = require('fs');
-const { BusRouteModel ,StopModel} = require('./models'); // Import your schema and model
+const { BusRouteModel, StopModel } = require('./models'); // Import your schema and model
 const path = require('path');
 const app = express();
 const port = 4000;
@@ -23,7 +21,7 @@ const busRoutesData={
       },
       {
         "SL.NO.": 2,
-        "NAME OF THE STOPPING": "DUNLOP India Ltd",
+        "NAME OF THE STOPPING": "DUNLOP",
         "TIME A.M": "06.05AM"
       },
       {
@@ -44,34 +42,20 @@ const busRoutesData={
 ]};
 
 
-const atlasConnectionString =  process.env.ATLASDB_URL;
+const atlasConnectionString = process.env.ATLASDB_URL;
 
-const mapToken = process.env.MAPBOX_APIKEY;
-
-// Initialize the Mapbox Geocoding client
-const geocodingClient = mbxGeocoding({ accessToken: mapToken });
-
-// Chennai bounding box coordinates
-const chennaiBoundingBox = [80.0833, 12.8333, 80.3333, 13.1667]; // [minLon, minLat, maxLon, maxLat]
-
-// Function to geocode a location using Mapbox Geocoding API
-async function geocodeLocation(locationName) {
+main = async () => {
     try {
-        const response = await geocodingClient.forwardGeocode({
-            query: locationName,
-            limit: 1,
-            bbox: chennaiBoundingBox
-        }).send();
+        // Connect to MongoDB Atlas
+        await mongoose.connect(atlasConnectionString);
+        console.log('Connected to MongoDB Atlas');
 
-        if (response && response.body && response.body.features && response.body.features.length > 0) {
-            // Extract coordinates from the first result
-            const coordinates = response.body.features[0].geometry.coordinates;
-            console.log(coordinates);
-            return coordinates;
-        } else {
-            console.error(`Geocoding failed for location: ${locationName}`);
-            return null;
-        }
+        // Fetch all busRoutesData
+        const busRoutesData = await BusRouteModel.find({});
+        console.log('Fetched all busRoutesData:', busRoutesData);
+        
+        // Pass busRoutesData to the rendering function
+        return busRoutesData;
     } catch (error) {
         console.error('Error geocoding location:', error.message);
         return null;
@@ -82,13 +66,9 @@ async function geocodeLocation(locationName) {
 async function geocodeBusRoute(busRouteData) {
     for (const stop of busRouteData) {
         const locationName = stop['NAME OF THE STOPPING'];
-        // Introduce a delay using setTimeout
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Adjust delay time as needed
-        
         const coordinates = await geocodeLocation(locationName);
         if (coordinates) {
-            // Ensure proper assignment of coordinates to the stop object
-            stop.coordinates = { type: 'Point', coordinates: [coordinates[0], coordinates[1]] };
+            stop.coordinates = { type: 'Point', coordinates: coordinates };
         } else {
             // If coordinates are not available, remove the stop from the route data
             delete stop.coordinates;
