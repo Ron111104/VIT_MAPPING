@@ -6,6 +6,7 @@
     <title>Bus Routes Map</title>
     <script src='https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js'></script>
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; padding: 0; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
@@ -14,66 +15,34 @@
 <body>
     <div id="map"></div>
     <script>
-        mapboxgl.accessToken = "<%=process.env.MAPBOX_APIKEY%>";
+        mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN'; // Replace with your Mapbox access token
 
+        // Define unique colors for each route
+        const routeColors = ['#FF5733', '#33FF57', '#5733FF']; // Add more colors as needed
+
+        // Initialize map
         var map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/streets-v11',
-            center: [80.235, 13.0104], // Default center (VIT Chennai coordinates)
+            center: [80.190381, 13.100852], // Center the map on a default location
             zoom: 10 // Adjust the zoom level as needed
         });
 
-        // Add markers for each stop with coordinates
-        <% Object.values(busRoutesData).forEach(stops => { %>
-            stops.forEach(stop => {
-                if (stop.coordinates) {
-                    new mapboxgl.Marker()
-                        .setLngLat(stop.coordinates.coordinates)
-                        .setPopup(new mapboxgl.Popup().setHTML('<h3>' + stop['NAME OF THE STOPPING'] + '</h3><p>' + stop['TIME A.M'] + '</p>'))
-                        .addTo(map);
-                }
+        // Add markers for bus stops with unique colors for each route
+        const busRoutesData = []; // Populate this array with your bus routes data
+
+        busRoutesData.forEach((route, index) => {
+            const color = routeColors[index % routeColors.length]; // Get a color from the routeColors array
+            route.stops.forEach(stop => {
+                new mapboxgl.Marker({
+                    color: color
+                })
+                .setLngLat([stop.coordinates[0], stop.coordinates[1]])
+                .setPopup(new mapboxgl.Popup().setHTML(`<h3>${stop.name}</h3><p>${stop.time}</p>`))
+                .addTo(map);
             });
-        <% }); %>
-
-        // Add a route line connecting the stops
-        <% Object.values(busRoutesData).forEach(stops => { %>
-            var coordinates = [];
-            stops.forEach(stop => {
-                if (stop.coordinates) {
-                    coordinates.push(stop.coordinates.coordinates);
-                }
-            });
-
-            if (coordinates.length > 1) {
-                var route = {
-                    'type': 'Feature',
-                    'geometry': {
-                        'type': 'LineString',
-                        'coordinates': coordinates
-                    }
-                };
-
-                map.on('load', function () {
-                    map.addSource('route', {
-                        'type': 'geojson',
-                        'data': route
-                    });
-                    map.addLayer({
-                        'id': 'route',
-                        'type': 'line',
-                        'source': 'route',
-                        'layout': {
-                            'line-join': 'round',
-                            'line-cap': 'round'
-                        },
-                        'paint': {
-                            'line-color': '#A020F0',
-                            'line-width': 4
-                        }
-                    });
-                });
-            }
-        <% }); %>
+        });
     </script>
 </body>
 </html>
+
