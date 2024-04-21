@@ -8,6 +8,12 @@ const app = express();
 const port = 4010;
 const busRoutesData = require('./data.json');
 
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "http://localhost:4000"); // Update this with your frontend URL
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
+
 require('dotenv').config();
 
 app.set('view engine', 'ejs');
@@ -109,9 +115,21 @@ async function geocodeAllBusRoutes(busRoutesData) {
     }
 }
 
+// Define the /routes endpoint to fetch bus routes data
+app.get('/routes', async (req, res) => {
+    try {
+        const busRoutesData = await BusRouteModel.find({});
+        res.json(busRoutesData);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// Define the main route to run the main function and send a response
 app.get('/', async (req, res) => {
     await main();
-    res.send("backend works");
+    res.send("Backend works"); // Or any other response
 });
 
 app.listen(port, () => {

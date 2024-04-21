@@ -15,71 +15,48 @@
 <body>
     <div id="map"></div>
     <script>
-        mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN'; // Replace with your Mapbox access token
+        // Access the Mapbox access token passed from the server
+        var mapboxAccessToken = '<%= mapboxAccessToken %>';
 
-        // Define unique colors for each route
-        const routeColors = ['#FF5733', '#33FF57', '#5733FF']; // Add more colors as needed
-
+        // Initialize map with the retrieved access token
+        mapboxgl.accessToken = mapboxAccessToken;
+        
         // Initialize map
         var map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/streets-v11',
-            center: [80.235, 13.0104], // Default center (VIT Chennai coordinates)
+            center: [80.0772106, 12.840641], // Center the map on a default location
             zoom: 10 // Adjust the zoom level as needed
         });
 
-        // Add markers for each stop with coordinates
-        <% Object.values(busRoutesData).forEach(stops => { %>
-            stops.forEach(stop => {
-                if (stop.coordinates) {
-                    new mapboxgl.Marker()
-                        .setLngLat(stop.coordinates.coordinates)
-                        .setPopup(new mapboxgl.Popup().setHTML('<h3>' + stop['NAME OF THE STOPPING'] + '</h3><p>' + stop['TIME A.M'] + '</p>'))
-                        .addTo(map);
-                }
-            });
-        <% }); %>
+        // Fetch bus routes data from server
+        fetch('/routes')
+            .then(response => response.json())
+            .then(routesData => {
+                // Define unique colors for each route
+                const routeColors = ['#FF5733', '#33FF57', '#5733FF']; // Add more colors as needed
 
-        // Add a route line connecting the stops
-        <% Object.values(busRoutesData).forEach(stops => { %>
-            var coordinates = [];
-            stops.forEach(stop => {
-                if (stop.coordinates) {
-                    coordinates.push(stop.coordinates.coordinates);
-                }
-            });
-
-            if (coordinates.length > 1) {
-                var route = {
-                    'type': 'Feature',
-                    'geometry': {
-                        'type': 'LineString',
-                        'coordinates': coordinates
-                    }
-                };
-
-                map.on('load', function () {
-                    map.addSource('route', {
-                        'type': 'geojson',
-                        'data': route
-                    });
-                    map.addLayer({
-                        'id': 'route',
-                        'type': 'line',
-                        'source': 'route',
-                        'layout': {
-                            'line-join': 'round',
-                            'line-cap': 'round'
-                        },
-                        'paint': {
-                            'line-color': '#A020F0',
-                            'line-width': 4
-                        }
+                // Add markers for bus stops with unique colors for each route
+                routesData.forEach((route, index) => {
+                    const color = routeColors[index % routeColors.length]; // Get a color from the routeColors array
+                    route.stops.forEach(stopName => {
+                        // Geocode each stop name and add marker to the map
+                        fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${stopName}.json?access_token=${mapboxAccessToken}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const coordinates = data.features[0].geometry.coordinates;
+                                new mapboxgl.Marker({
+                                    color: color
+                                })
+                                .setLngLat([coordinates[0], coordinates[1]])
+                                .setPopup(new mapboxgl.Popup().setHTML(`<h3>${stopName}</h3>`))
+                                .addTo(map);
+                            })
+                            .catch(error => console.error(`Error geocoding stop ${stopName}:`, error));
                     });
                 });
-            }
-        <% }); %>
+            })
+            .catch(error => console.error('Error fetching bus routes:', error));
     </script>
 </body>
 </html>
-
