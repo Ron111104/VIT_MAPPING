@@ -68,11 +68,10 @@ main = async () => {
     }
 };
 
-
 const atlasConnectionString = process.env.ATLASDB_URL;
 const mapToken = process.env.MAPBOX_APIKEY;
 const geocodingClient = mbxGeocoding({ accessToken: mapToken });
-const chennaiBoundingBox = [80.0833, 12.8333, 80.3333, 13.1667];
+const chennaiBoundingBox = [79.7833, 12.3333, 80.8333, 13.6667];
 
 async function geocodeLocation(locationName) {
     try {
@@ -99,11 +98,13 @@ async function geocodeLocation(locationName) {
 async function geocodeBusRoute(busRouteData) {
     for (const stop of busRouteData) {
         const locationName = stop['NAME OF THE STOPPING'];
-        const coordinates = await geocodeLocation(locationName);
-        if (coordinates) {
-            stop.coordinates = { type: 'Point', coordinates: coordinates };
-        } else {
-            delete stop.coordinates;
+        if (locationName !== 'VIT') { // Check if stop name is not "VIT"
+            const coordinates = await geocodeLocation(locationName);
+            if (coordinates) {
+                stop.coordinates = { type: 'Point', coordinates: coordinates };
+            } else {
+                delete stop.coordinates;
+            }
         }
     }
 }
