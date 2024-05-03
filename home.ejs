@@ -36,6 +36,7 @@
             color: 'red' // Set marker color to red
         })
         .setLngLat(redMarkerCoords)
+        .setPopup(new mapboxgl.Popup().setHTML('<h4>VIT Chennai</h4>'))
         .addTo(map);
 
         // Bus routes data
@@ -58,73 +59,124 @@
         ];
 
         map.on('load', function() {
-            // Add markers for each stop with unique colors for each route
-            busRoutes.forEach(route => {
-                route.stops.forEach(stop => {
-                    new mapboxgl.Marker({
-                        color: route.color // Set marker color to route's color
-                    })
+    // Object to keep track of added layers
+    var addedLayers = {};
+
+    // Add circles or markers for each stop with unique colors for each route
+    busRoutes.forEach(route => {
+        route.stops.forEach((stop, i) => {
+            const layerId = stop.name + '-layer';
+            if (i === 0) { // If it's the first stop, add a marker
+                // Add marker for the specified coordinates
+                new mapboxgl.Marker({
+                    color: route.color // Set marker color to route's color
+                })
                     .setLngLat(stop.coordinates)
-                    .setPopup(new mapboxgl.Popup().setHTML(`<h3>${stop.name}</h3><p>Route: ${route.routeNumber}</p><p>Time: ${stop.time}</p>`))
+                    .setPopup(new mapboxgl.Popup().setHTML('<h3>Route: ' + route.routeNumber + '</h3>' +
+                                                       '<p>Stop: ' + stop.name + '</p>' +
+                                                       '<p>Time: ' + stop.time + '</p>'))
                     .addTo(map);
-                });
+            } else { // If it's not the first stop, add a circle
+                const circleLayerId = stop.name + '-circle';
 
-                // Connect stops based on route directions
-                for (let i = 0; i < route.stops.length - 1; i++) {
-                    const origin = route.stops[i].coordinates;
-                    const destination = route.stops[i + 1].coordinates;
-                    const directionsRequest = 'https://api.mapbox.com/directions/v5/mapbox/driving/' + origin[0] + ',' + origin[1] + ';' + destination[0] + ',' + destination[1] + '?steps=true&geometries=geojson&access_token=' + mapboxAccessToken;
-
-                    fetch(directionsRequest)
-                        .then(response => response.json())
-                        .then(data => {
-                            map.addLayer({
-                                id: route.routeNumber + '-line-' + i,
-                                type: 'line',
-                                source: {
-                                    type: 'geojson',
-                                    data: data.routes[0].geometry
-                                },
-                                layout: {
-                                    'line-join': 'round',
-                                    'line-cap': 'round'
-                                },
-                                paint: {
-                                    'line-color': route.color,
-                                    'line-width': 2
+                // Check if the layer already exists
+                if (!addedLayers[circleLayerId]) {
+                    map.addLayer({
+                        id: circleLayerId,
+                        type: 'circle',
+                        source: {
+                            type: 'geojson',
+                            data: {
+                                type: 'Feature',
+                                properties: {},
+                                geometry: {
+                                    type: 'Point',
+                                    coordinates: stop.coordinates
                                 }
-                            });
-                        })
-                        .catch(error => console.error('Error fetching route:', error));
-                }
-                
-                // Connect the last stop of each route to the red marker
-                const lastStop = route.stops[route.stops.length - 1].coordinates;
-                const directionsRequestToRedMarker = 'https://api.mapbox.com/directions/v5/mapbox/driving/' + lastStop[0] + ',' + lastStop[1] + ';' + redMarkerCoords[0] + ',' + redMarkerCoords[1] + '?steps=true&geometries=geojson&access_token=' + mapboxAccessToken;
-
-                fetch(directionsRequestToRedMarker)
-                    .then(response => response.json())
-                    .then(data => {
-                        map.addLayer({
-                            id: route.routeNumber + '-line-end',
-                            type: 'line',
-                            source: {
-                                type: 'geojson',
-                                data: data.routes[0].geometry
-                            },
-                            layout: {
-                                'line-join': 'round',
-                                'line-cap': 'round'
-                            },
-                            paint: {
-                                'line-color': 'blue',
-                                'line-width': 2
                             }
-                        });
-                    })
-                    .catch(error => console.error('Error fetching route to red marker:', error));
-            });
+                        },
+                        paint: {
+                            'circle-color': route.color, // Set circle color to route's color
+                            'circle-radius': 5 // Adjust circle radius as needed
+                        }
+                    });
+
+                    // Add click event listener to each circle
+                    map.on('click', circleLayerId, function(e) {
+                        var popupContent = '<h3>Route: ' + route.routeNumber + '</h3>' +
+                                           '<p>Stop: ' + stop.name + '</p>' +
+                                           '<p>Time: ' + stop.time + '</p>';
+
+                        new mapboxgl.Popup()
+                            .setLngLat(e.features[0].geometry.coordinates)
+                            .setHTML(popupContent)
+                            .addTo(map);
+                    });
+
+                    // Set the layer as added
+                    addedLayers[circleLayerId] = true;
+                }
+            }
         });
+
+        // Connect stops based on route directions
+        for (let i = 0; i < route.stops.length - 1; i++) {
+            const origin = route.stops[i].coordinates;
+            const destination = route.stops[i + 1].coordinates;
+            const directionsRequest = 'https://api.mapbox.com/directions/v5/mapbox/driving/' + origin[0] + ',' + origin[1] + ';' + destination[0] + ',' + destination[1] + '?steps=true&geometries=geojson&access_token=' + mapboxAccessToken;
+
+            fetch(directionsRequest)
+                .then(response => response.json())
+                .then(data => {
+                    map.addLayer({
+                        id: route.routeNumber + '-line-' + i,
+                        type: 'line',
+                        source: {
+                            type: 'geojson',
+                            data: data.routes[0].geometry
+                        },
+                        layout: {
+                            'line-join': 'round',
+                            'line-cap': 'round'
+                        },
+                        paint: {
+                            'line-color': 'blue',
+                            'line-width': 1
+                        }
+                    });
+                })
+                .catch(error => console.error('Error fetching route:', error));
+        }
+
+        // Connect the last stop of each route to the red marker
+        const lastStop = route.stops[route.stops.length - 1].coordinates;
+        const directionsRequestToRedMarker = 'https://api.mapbox.com/directions/v5/mapbox/driving/' + lastStop[0] + ',' + lastStop[1] + ';' + redMarkerCoords[0] + ',' + redMarkerCoords[1] + '?steps=true&geometries=geojson&access_token=' + mapboxAccessToken;
+
+        fetch(directionsRequestToRedMarker)
+            .then(response => response.json())
+            .then(data => {
+                map.addLayer({
+                    id: route.routeNumber + '-line-end',
+                    type: 'line',
+                    source: {
+                        type: 'geojson',
+                        data: data.routes[0].geometry
+                    },
+                    layout: {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    paint: {
+                        'line-color': 'blue',
+                        'line-width': 1
+                    }
+                });
+            })
+            .catch(error => console.error('Error fetching route to red marker:', error));
+    });
+});
+
     </script>
 </body>
 </html>
+

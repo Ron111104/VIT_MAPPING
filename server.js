@@ -72,7 +72,8 @@ const atlasConnectionString = process.env.ATLASDB_URL;
 const mapToken = process.env.MAPBOX_APIKEY;
 const geocodingClient = mbxGeocoding({ accessToken: mapToken });
 const chennaiBoundingBox = [79.7833, 12.3333, 80.8333, 13.6667];
-
+let boundingBox = [79.2833, 12.8333, 81.0333, 14.2667];
+// Update your geocodeLocation function to handle errors and logging
 async function geocodeLocation(locationName) {
     try {
         const response = await geocodingClient.forwardGeocode({
@@ -83,30 +84,76 @@ async function geocodeLocation(locationName) {
 
         if (response && response.body && response.body.features && response.body.features.length > 0) {
             const coordinates = response.body.features[0].geometry.coordinates;
-            console.log(coordinates);
+            console.log(`Geocoding successful for location: ${locationName}`);
             return coordinates;
         } else {
             console.error(`Geocoding failed for location: ${locationName}`);
             return null;
         }
     } catch (error) {
-        console.error('Error geocoding location:', error.message);
+        console.error(`Error geocoding location ${locationName}:`, error.message);
         return null;
     }
 }
 
 async function geocodeBusRoute(busRouteData) {
-    for (const stop of busRouteData) {
+    let prevTimeInMinutes = 8 * 60; // Initial time set to 8:00 AM in minutes
+    let prevCoordinates = [80.0772106, 12.840641]; // Initial coordinates set to [80.0772106, 12.840641]
+    //console.log(busRouteData);
+    for (let i = busRouteData.length - 1; i >= 0; i--) {
+        if (busRouteData[i]['NAME OF THE STOPPING']!== 'VIT') {
+        const stop = busRouteData[i];
         const locationName = stop['NAME OF THE STOPPING'];
-        if (locationName !== 'VIT') { // Check if stop name is not "VIT"
+        const time = stop['TIME A.M'];
+
+        // Convert time to minutes
+        const hours = parseInt(time.substring(0, 2));
+        const minutes = parseInt(time.substring(3, 5));
+        const currentTimeInMinutes = hours * 60 + minutes;
+
+        // Calculate time difference
+        const timeDifference = prevTimeInMinutes - currentTimeInMinutes;
+
+        // Calculate bounding box based on time difference and previous coordinates4
+        if(timeDifference>0){
+            boundingBox = calculateBoundingBox(prevCoordinates, timeDifference);
+        }
+        else{
+            boundingBox = calculateBoundingBox(prevCoordinates, -1*timeDifference);
+        }
+        
+
+         // Check if stop name is not "VIT"
             const coordinates = await geocodeLocation(locationName);
             if (coordinates) {
                 stop.coordinates = { type: 'Point', coordinates: coordinates };
+                //console.log(prevCoordinates, coordinates);
+                prevCoordinates = coordinates; // Update previous coordinates
             } else {
                 delete stop.coordinates;
             }
+            prevTimeInMinutes = currentTimeInMinutes; 
         }
+        
+        // Update previous time
     }
+}
+
+// Function to calculate bounding box based on coordinates and timing difference
+function calculateBoundingBox(coordinates, timeDiffMinutes) {
+    //console.log(timeDiffMinutes, 'time difference');
+    // Calculate adjustments based on time difference
+    const latAdjustment = timeDiffMinutes * 0.005; // Adjust latitude by 0.0001 degrees per minute
+    const lngAdjustment = timeDiffMinutes * 0.005; // Adjust longitude by 0.0002 degrees per minute
+
+    // Calculate bounding box
+    const bbox = [
+        coordinates[0] - lngAdjustment, // west
+        coordinates[1] - latAdjustment, // south
+        coordinates[0] + lngAdjustment, // east
+        coordinates[1] + latAdjustment  // north
+    ];
+    return bbox;
 }
 
 async function geocodeAllBusRoutes(busRoutesData) {
