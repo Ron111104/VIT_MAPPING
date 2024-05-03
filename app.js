@@ -29,10 +29,24 @@ main = async () => {
     }
 };
 
+app.get('/input',async(req,res)=>{
+    const busRoutes = await main();
+    try{
+
+        res.render('input' ,{
+            mapboxAccessToken: process.env.MAPBOX_APIKEY,
+            busRoutes: busRoutes
+        });
+    }catch(error){
+        console.error('Error:', error);
+        res.status(500).send('Internal Server Error');
+    }
+})
+
 app.get('/', async (req, res) => {
+    const busRoutes = await main();
     try {
         // Fetch bus routes from MongoDB
-        const busRoutes = await main();
 
         // Render the home template with both mapboxAccessToken and busRoutes
         res.render('home', {
@@ -44,7 +58,6 @@ app.get('/', async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
-
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
